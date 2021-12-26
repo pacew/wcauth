@@ -11,6 +11,7 @@ $extra_javascript .= "<script src='login.js'></script>\n";
 
 $arg_pub = trim (@$_REQUEST['pub']);
 $arg_sig = trim (@$_REQUEST['sig']);
+$arg_return_to = trim(@$_REQUEST['return_to']);
 
 if (($nonce = @getsess ("nonce")) == "") {
     $nonce = generate_urandom_string(8);
@@ -18,6 +19,8 @@ if (($nonce = @getsess ("nonce")) == "") {
 }
 
 if ($arg_pub == "") {
+    putsess ("login_return_to", $arg_return_to);
+
     $extra_javascript .= "<script>\n";
     $extra_javascript .= "wcauth_send_key = 1;\n";
     $extra_javascript .= sprintf ("wcauth_nonce = '%s';\n", $nonce);
@@ -55,6 +58,11 @@ if (($r = fetch ($q)) == NULL) {
 }
 
 putsess ("user_id", $user_id);
+
+$t = getsess ("login_return_to");
+
+if ($t)
+    redirect ($t);
 
 $body .= sprintf ("<p>welcome user %d</p>\n", $user_id);
 

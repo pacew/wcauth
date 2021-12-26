@@ -31,11 +31,13 @@ function pstart () {
     $body = "";
     $extra_javascript = "";
 
-    global $username;
-    $username = getsess ("username");
+    global $user_id;
+    $user_id = intval (getsess ("user_id"));
     global $anon_ok;
-    if (0 && ! @$anon_ok && $username == "") {
-        redirect ("login.php");
+    if (! @$anon_ok && $user_id == 0) {
+        $t = sprintf ("login.php?return_to=%s", 
+            urlencode ($_SERVER['REQUEST_URI']));
+        redirect ($t);
     }
 
     $flash = trim (@$_SESSION['flash']);
@@ -49,9 +51,20 @@ function pstart () {
     $body .= "<p>";
     $body .= mklink ("home", "/");
     $body .= " | ";
-    $body .= mklink ("login", "login.php");
-    $body .= " | ";
-    $body .= mklink ("logout", "logout.php");
+    $body .= mklink ("protected", "protected.php?example=123#abc");
+
+    if ($user_id == 0) {
+        $body .= " | ";
+        $body .= mklink ("login", "login.php");
+    } else {
+        $body .= " | ";
+
+        $user_name = sprintf ("user%d", $user_id);
+        $body .= mklink ($user_name, "settings.php");
+
+        $body .= " | ";
+        $body .= mklink ("logout", "logout.php");
+    }
     $body .= "</p>\n";
 
 }
