@@ -11,7 +11,6 @@ $extra_javascript .= "<script src='login.js'></script>\n";
 
 $arg_pub = trim (@$_REQUEST['pub']);
 $arg_sig = trim (@$_REQUEST['sig']);
-$arg_cksum = intval(@$_REQUEST['cksum']);
 
 if (($nonce = @getsess ("nonce")) == "") {
     $nonce = generate_urandom_string(8);
@@ -26,42 +25,37 @@ if ($arg_pub == "") {
     pfinish ();
 }
 
-$body .= sprintf ("<p>cksum %d</p>\n", $arg_cksum);
-
-if (0) {
-    $body .= "<pre>\n";
-    $body .= h($arg_pub);
-    $body .= "</pre>\n";
-
-    $body .= "<pre>\n";
-    $body .= h($arg_sig);
-    $body .= "</pre>\n";
-}
-
 $sig_binary = base64_decode ($arg_sig);
 
-$len = strlen($sig_binary);
-$body .= sprintf ("<p>sig len %d</p>\n", $len);
-
-$cksum = 0;
-for ($i = 0; $i < $len; $i++) {
-    $cksum += ord($sig_binary[$i]);
-}
-$body .= sprintf ("<p>cksum %d</p>\n", $cksum);
-
-$key = openssl_pkey_get_public ($arg_pub);
-
-if (0) {
-    $k = openssl_pkey_get_details($key);
-    $body .= "<pre>\n";
-    $body .= h($k['key']);
-    $body .= h($arg_pub);
-    $body .= "</pre>\n";
-}
-
-var_dump ($nonce);
 $val = openssl_verify ($nonce, $sig_binary, $arg_pub, 'sha256');
-$body .= sprintf ("<p>result %d</p>\n", $val);
 
+if ($val <= 0) {
+    $body .= "<p>invalid login</p>\n";
+    pfinish ();
+}
+
+$body .= "login ok";
+
+$q = query ("select key_id, user_id"
+    ." from pub_keys"
+    ." where key_text = ?",
+    $arg_pub);
+
+if (($r = fetch ($q)) == NULL) {
+    $key_id = get_seq ();
+    $user_id = get_seq ();
+
+    query ("insert into users (user_id) values (?)", $user_id);
+    query ("insert into pub_keys (key_id, user_id, key_text)"
+        ." values (?, ?, ?)",
+        array ($key_id, $user_id, $arg_pub));
+} else {
+    $key_id = intval ($r->key_id);
+    $user_id = intval ($r->user_id);
+}
+
+putsess ("user_id", $user_id);
+
+$body .= sprintf ("<p>welcome user %d</p>\n", $user_id);
 
 pfinish ();

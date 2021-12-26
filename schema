@@ -9,3 +9,11 @@ col session text
 table vars
 col var text
 col val text
+
+table users
+col user_id int
+
+table pub_keys
+col key_id int
+col user_id int
+col key_text text

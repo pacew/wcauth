@@ -40,48 +40,22 @@ async function wcauth_start () {
   pub = await encode_public_key (key_pair.publicKey);
 
   var enc = new TextEncoder();
-
   let nonce_bytes = enc.encode(wcauth_nonce)
 
-//  nonce_bytes = new Uint8Array([0]);
-//  nonce_bytes[0] = 32;
-
-  console.log(['input', nonce_bytes]);
   let sig = await window.crypto.subtle.sign({
     name: "RSASSA-PKCS1-v1_5",
   }, key_pair.privateKey, nonce_bytes);
 
-  console.log(['sig', sig]);
-
   let sig_view = new Uint8Array(sig);
-
-  var cksum = 0;
-  for (var i = 0; i < sig.byteLength; i++)
-    cksum += sig_view[i];
-  console.log(cksum);
-  // 16159
-
-  // 132 174 55 246 ... for 128 bytes
-  console.log(sig);
   let sig_base64 = base64_encode (sig);
-  console.log(sig_base64);
 
   let dest = "/login.php" +
-      "?cksum=" + cksum +
-      "&sig=" + encodeURIComponent(sig_base64) +
+      "?sig=" + encodeURIComponent(sig_base64) +
       "&pub=" + encodeURIComponent(pub);
 
   console.log(dest);
   window.location = dest;
 }
-
-  // priv_key = key_pair.privateKey
-
-  // var nonce = new Uint8Array(8);
-  // self.crypto.getRandomValues(nonce);
-
-
-
 
 var wcauth_send_key = 0;
 var wcauth_nonce = "";
