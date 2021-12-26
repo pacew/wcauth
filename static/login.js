@@ -1,13 +1,9 @@
-const twentyBytes = crypto.getRandomValues(new Uint8Array(20));
-
 function base64_encode(s) {
   return (btoa(String.fromCharCode.apply(null, new Uint8Array(s))));
 }
 
-
 // from https://stackoverflow.com/questions/40314257/export-webcrypto-key-to-pem-format
 // Micah Henning
-
 async function encode_public_key (pub_key) {
   const spki = await window.crypto.subtle.exportKey('spki', pub_key);
   let text = window.btoa(String.fromCharCode(...new Uint8Array(spki)));
@@ -19,7 +15,7 @@ async function get_key_pair () {
   let key_store = new KeyStore ();
   await key_store.open();
 
-  const key_name = "wcauth5";
+  const key_name = "wcauth6";
 
   key = await key_store.getKey("name", key_name);
   if (! key) {
@@ -44,9 +40,6 @@ async function wcauth_start () {
   pub = await encode_public_key (key_pair.publicKey);
 
   var enc = new TextEncoder();
-
-  // force text to be a space
-  wcauth_nonce = 'x'
 
   let nonce_bytes = enc.encode(wcauth_nonce)
 

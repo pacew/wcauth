@@ -59,7 +59,6 @@ if (0) {
     $body .= "</pre>\n";
 }
 
-$nonce = 'x';
 var_dump ($nonce);
 $val = openssl_verify ($nonce, $sig_binary, $arg_pub, 'sha256');
 $body .= sprintf ("<p>result %d</p>\n", $val);
