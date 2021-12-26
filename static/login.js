@@ -15,7 +15,7 @@ async function get_key_pair () {
   let key_store = new KeyStore ();
   await key_store.open();
 
-  const key_name = "wcauth6";
+  const key_name = window.location.host;
 
   key = await key_store.getKey("name", key_name);
   if (! key) {
@@ -55,6 +55,7 @@ async function wcauth_start () {
 
   console.log(dest);
   window.location = dest;
+  console.log(window.location);
 }
 
 var wcauth_send_key = 0;
