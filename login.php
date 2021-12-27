@@ -58,6 +58,7 @@ if (($r = fetch ($q)) == NULL) {
 }
 
 putsess ("user_id", $user_id);
+putsess ("key_id", $key_id);
 
 $t = getsess ("login_return_to");
 

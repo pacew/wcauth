@@ -17,3 +17,7 @@ table pub_keys
 col key_id int
 col user_id int
 col key_text text
+
+table link_requests
+col user_id int
+col token text

@@ -31,8 +31,9 @@ function pstart () {
     $body = "";
     $extra_javascript = "";
 
-    global $user_id;
+    global $user_id, $key_id;
     $user_id = intval (getsess ("user_id"));
+    $key_id = intval (getsess ("key_id"));
     global $anon_ok;
     if (! @$anon_ok && $user_id == 0) {
         $t = sprintf ("login.php?return_to=%s", 
