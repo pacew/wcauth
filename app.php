@@ -17,27 +17,37 @@ if (! @$cli_mode
 
 
 $title_html = "wcauth";
+
 function check_login () {
-    global $user_id, $key_id;
+    $user_id = 0;
+    $email = "";
 
-    $need_login = 0;
+    if (($key_id = intval (getsess ("key_id"))) != 0) {
+        $q = query ("select user_id"
+            ." from pub_keys"
+            ." where key_id = ?", $key_id);
+        if (($r = fetch ($q)) != NULL) {
+            $user_id = intval ($r->user_id);
 
-    $user_id = intval (getsess ("user_id"));
-    $key_id = intval (getsess ("key_id"));
-
-    /* re-login if the link from key_id to user_id has changed */
-    $q = query ("select user_id from pub_keys where key_id = ?", $key_id);
-    if (($r = fetch ($q)) != NULL) {
-        $uid = intval ($r->user_id);
-        if ($uid != $user_id)
-            $need_login = 1;
+            $q = query ("select email"
+                ." from users"
+                ." where user_id = ?", $user_id);
+            if (($r = fetch ($q)) != NULL) {
+                $email = trim ($r->email);
+            }
+        }
     }
 
-    global $anon_ok;
-    if (! @$anon_ok && $user_id == 0)
-        $need_login = 1;
+    global $user;
+    $user = (object)NULL;
+    $user->key_id = $key_id;
+    $user->user_id = $user_id;
+    $user->email = $email;
 
-    if ($need_login && $_SERVER['PHP_SELF'] != "/login.php") {
+    global $anon_ok;
+    if (! @$anon_ok 
+        && $user->user_id == 0
+        && $_SERVER['PHP_SELF'] != "/login.php") {
         $t = sprintf ("login.php?return_to=%s", 
             urlencode ($_SERVER['REQUEST_URI']));
         redirect ($t);
@@ -71,14 +81,15 @@ function pstart () {
     $body .= " | ";
     $body .= mklink ("protected", "protected.php?example=123#abc");
 
-    global $user_id;
-    if ($user_id == 0) {
+    global $user;
+    if ($user->user_id == 0) {
         $body .= " | ";
         $body .= mklink ("login", "login.php");
     } else {
         $body .= " | ";
 
-        $user_name = sprintf ("user%d", $user_id);
+        if (($user_name = $user->email) == "")
+            $user_name = sprintf ("user%d", $user->user_id);
         $body .= mklink ($user_name, "settings.php");
 
         $body .= " | ";

@@ -18,9 +18,6 @@ $link_request_user_id = intval($r->user_id);
 $link_request_key_id = intval ($r->key_id);
 $link_request_email = trim($r->email);
 
-$logged_in_user_id = $user_id;
-$logged_in_key_id = $key_id;
-
 if ($link_request_email) {
     $q = query ("select user_id"
         ." from users"
@@ -57,13 +54,13 @@ if ($link_request_email) {
     $target_user_id = $link_request_user_id;
 }
 
-if ($target_user_id != $logged_in_user_id) {
+if ($target_user_id != $user->user_id) {
     /*
      * change the public key that we're logged in as to point to
      * $target_user_id
      */
     query ("update pub_keys set user_id = ? where key_id = ?",
-        array ($target_user_id, $logged_in_key_id));
+        array ($target_user_id, $user->key_id));
 }
 
 /* clean up requests */
@@ -73,8 +70,5 @@ if ($link_request_email) {
 query ("delete from link_requests where user_id = ?", $link_request_user_id);
 query ("delete from link_requests where token = ?", $arg_token);
 query ("delete from link_requests where user_id = ?", $target_user_id);
-
-/* will become this user after the redirect */
-putsess ("user_id", $target_user_id);
 
 redirect ("settings.php");

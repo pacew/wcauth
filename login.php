@@ -39,10 +39,7 @@ if ($val <= 0) {
 
 $body .= "login ok";
 
-$q = query ("select key_id, user_id"
-    ." from pub_keys"
-    ." where key_text = ?",
-    $arg_pub);
+$q = query ("select key_id from pub_keys where key_text = ?", $arg_pub);
 
 if (($r = fetch ($q)) == NULL) {
     $key_id = get_seq ();
@@ -54,10 +51,8 @@ if (($r = fetch ($q)) == NULL) {
         array ($key_id, $user_id, $arg_pub));
 } else {
     $key_id = intval ($r->key_id);
-    $user_id = intval ($r->user_id);
 }
 
-putsess ("user_id", $user_id);
 putsess ("key_id", $key_id);
 
 $t = getsess ("login_return_to");

@@ -15,9 +15,9 @@ if ($arg_link == 1) {
 
     $request_id = get_seq ();
     $email = "";
-    query ("insert into link_requests (request_id user_id, email, token"
+    query ("insert into link_requests (request_id, user_id, email, token"
     ." ) values (?, ?, ?, ?)",
-        array ($request_id, $user_id, $email, $token));
+        array ($request_id, $user->user_id, $email, $token));
 
     $body .= "<p>Paste this link into a different browser"
           ." to link accounts.</p>\n";
@@ -33,20 +33,10 @@ if ($arg_link == 1) {
     pfinish ();
 }
 
-$db_email = "";
-
-$q = query ("select email"
-    ." from users"
-    ." where user_id = ?",
-    $user_id);
-if (($r = fetch ($q)) != NULL) {
-    $db_email = trim ($r->email);
-}
-
 $q = query ("select distinct email"
     ." from link_requests"
     ." where user_id = ?",
-    $user_id);
+    $user->user_id);
 
 $pending_requests = [];
 while (($r = fetch ($q)) != NULL) {
@@ -58,15 +48,17 @@ while (($r = fetch ($q)) != NULL) {
 
 if ($arg_save == 1) {
     if ($arg_email == "") {
-        query ("update users set email = NULL where user_id = ?", $user_id);
-    } else if (strcmp ($arg_email, $db_email) != 0) {
+        query ("update users set email = NULL where user_id = ?", 
+            $user->user_id);
+    } else if (strcmp ($arg_email, $user->email) != 0) {
         $token = generate_urandom_string (10);
         
         $request_id = get_seq ();
         query ("insert into link_requests ("
             ." request_id, user_id, key_id, email, token"
             ." ) values (?,?,?,?,?)",
-            array ($request_id, $user_id, $key_id, $arg_email, $token));
+            array ($request_id, $user->user_id, $user->key_id, 
+                $arg_email, $token));
         
         $t = sprintf ("link.php?token=%s", $token);
         $url = make_absolute ($t);
@@ -116,7 +108,7 @@ $body .= "<input type='hidden' name='save' value='1' />\n";
 $body .= "<table class='twocol'>\n";
 $body .= "<tr><th>email</th><td>";
 $body .= sprintf ("<input type='text' name='email' value='%s' size='40' />",
-    h($db_email));
+    h($user->email));
 
 if ($pending_requests) {
     $body .= "<br/>";
@@ -141,11 +133,16 @@ $body .= mklink ("make a link for this account", "settings.php?link=1");
 $body .= "</p>\n";
 
 
-$q = query ("select key_id from pub_keys where user_id = ?", $user_id);
+$body .= "<div class='debug_box'>\n";
+$body .= sprintf ("<p>user_id %d; active key_id %d</p>", 
+    $user->user_id, $user->key_id);
+$q = query ("select key_id from pub_keys where user_id = ?", $user->user_id);
 $keys = [];
 while (($r = fetch ($q)) != NULL) {
     $keys[] = intval($r->key_id);
 }
-$body .= sprintf ("<p>key_ids %s</p>\n", implode(',', $keys));
+$body .= sprintf ("<p>all key_ids for this user: %s</p>\n", 
+    implode(',', $keys));
+$body .= "</div>\n";
 
 pfinish ();
