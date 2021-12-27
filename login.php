@@ -65,6 +65,4 @@ $t = getsess ("login_return_to");
 if ($t)
     redirect ($t);
 
-$body .= sprintf ("<p>welcome user %d</p>\n", $user_id);
-
-pfinish ();
+redirect ("/");
