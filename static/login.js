@@ -19,7 +19,6 @@ async function get_key_pair () {
 
   key = await key_store.getKey("name", key_name);
   if (! key) {
-    console.log ("make key");
     let key_pair = await window.crypto.subtle.generateKey({
       name: "RSASSA-PKCS1-v1_5",
       modulusLength: 1024,
@@ -53,9 +52,7 @@ async function wcauth_start () {
       "?sig=" + encodeURIComponent(sig_base64) +
       "&pub=" + encodeURIComponent(pub);
 
-  console.log(dest);
   window.location = dest;
-  console.log(window.location);
 }
 
 var wcauth_send_key = 0;
