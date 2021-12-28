@@ -1,0 +1,30 @@
+add expiration times to various database rows and a cleaner to the php
+
+add managmement of local indexedDB records
+
+do some key juggling so the key that gets stored in the browser is
+marked "sign only" and non-exportable and the key that is sent to the
+server is marked "verify only"
+
+decide on key length and nonce length; make signer reject requests for
+the wrong length nonce, or if it isn't all hex digits
+
+write up security analysis ... will be pretty easy: the key is
+generated for just this purpose and isn't shared with anything (like
+ssh or gpg).  there are only 2 operations: browser signs nonce, and
+server verifies the signature.  
+
+mark the points where a user_id is abandoned during the linking
+process.  provide hooks in case the application wants to merge data
+from the old user_id to the new one
+
+make it easier to incorporate into projects:
+
+  maybe consolidate all the php into one file with various flags
+
+  change the one use of jquery to plain javascript document ready
+
+  separate from psite
+
+  make parallel implementation for python servers
+
