@@ -43,7 +43,7 @@ function db_interface() {
 	fulfill(evt.target.result);
       };
       req.onerror = function(evt) {
-	rejet(evt.target.error);
+	reject(evt.target.error);
       };
     });
   };
