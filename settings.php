@@ -145,4 +145,8 @@ $body .= sprintf ("<p>all key_ids for this user: %s</p>\n",
     implode(',', $keys));
 $body .= "</div>\n";
 
+$body .= "<p>";
+$body .= mklink ("delete key", "login.php?delete=1");
+$body .= "</p>";
+
 pfinish ();

@@ -11,13 +11,57 @@ async function encode_public_key (pub_key) {
   return `-----BEGIN PUBLIC KEY-----\n${text}\n-----END PUBLIC KEY-----`;
 }
 
+const database_name = 'wcauth';
+
+function db_interface() {
+  let self = this;
+  self.db = null;
+  self.table = 'key';
+
+  self.open = function() {
+    return new Promise (function (fulfill, reject) {
+      let req = indexedDB.open(database_name, 4);
+      req.onsuccess = function (evt) {
+	self.db = evt.target.result;
+	fulfill (self);
+      }
+      req.onupgradeneeded = function(evt) {
+	self.db = evt.target.result;
+	if (! self.db.objectStoreNames.contains(self.table)) {
+	  self.db.createObjectStore(self.table);
+	}
+      }
+    });
+  }
+
+  self.get_key = function () {
+    return new Promise(function (fulfill, reject) {
+      var trans = self.db.transaction([self.table], "readonly");
+      var object_store = trans.objectStore(self.table);
+      let req = object_store.get(1);
+      req.onsuccess = function(evt) {
+	fulfill(evt.target.result);
+      };
+      req.onerror = function(evt) {
+	rejet(evt.target.error);
+      };
+    });
+  };
+
+  self.save_key = function(item) {
+    return new Promise(function(fulfill, reject) {
+      var trans = self.db.transaction([self.table], "readwrite");
+      trans.oncomplete = function(evt) {fulfill(item);};
+      var objectStore = trans.objectStore(self.table);
+      objectStore.put(item, 1);
+    });
+  };
+}
+
 async function get_key_pair () {
-  let key_store = new KeyStore ();
-  await key_store.open();
-
-  const key_name = window.location.host;
-
-  key = await key_store.getKey("name", key_name);
+  let db = new db_interface();
+  await db.open();
+  let key = await db.get_key();
   if (! key) {
     let key_pair = await window.crypto.subtle.generateKey({
       name: "RSASSA-PKCS1-v1_5",
@@ -26,41 +70,51 @@ async function get_key_pair () {
       hash: "SHA-256",
     }, true, ["sign", "verify"]);
 
-  
-    await key_store.saveKey(key_pair.publicKey, key_pair.privateKey, key_name);
+    key = [key_pair.publicKey, key_pair.privateKey];
+    await db.save_key(key);
   }
-
-  return (await key_store.getKey("name", key_name));
+  return (key);
 }
 
-async function wcauth_start () {
-  let key_pair = await get_key_pair ();
+async function delete_database () {
+  await window.indexedDB.deleteDatabase(database_name);
+}
 
-  pub = await encode_public_key (key_pair.publicKey);
+async function wcauth_login (nonce) {
+  let key_pair = await get_key_pair ();
+  let public_key = key_pair[0];
+  let private_key = key_pair[1];
+
+  pub = await encode_public_key (public_key);
 
   var enc = new TextEncoder();
-  let nonce_bytes = enc.encode(wcauth_nonce)
+  let nonce_bytes = enc.encode(nonce)
 
-  let sig = await window.crypto.subtle.sign({
-    name: "RSASSA-PKCS1-v1_5",
-  }, key_pair.privateKey, nonce_bytes);
+  let sig = await window.crypto.subtle.sign({name:"RSASSA-PKCS1-v1_5"}, 
+					    private_key, 
+					    nonce_bytes);
 
-  let sig_view = new Uint8Array(sig);
   let sig_base64 = base64_encode (sig);
 
-  let dest = "/login.php" +
+  let dest = window.location.pathname +
       "?sig=" + encodeURIComponent(sig_base64) +
       "&pub=" + encodeURIComponent(pub);
 
   window.location = dest;
 }
 
-var wcauth_send_key = 0;
-var wcauth_nonce = "";
+document.addEventListener("DOMContentLoaded", function() {
+  let elt;
 
-$(function () {
-  if (wcauth_send_key)
-    wcauth_start ();
+  elt = document.getElementById('wcauth_signin');
+  if (elt && elt.innerHTML) {
+    wcauth_login (elt.innerHTML);
+  }
+
+  if ((elt = document.getElementById('wcauth_delete')) != null) {
+    delete_database();
+    window.location = '/';
+  }
+
 });
-
 

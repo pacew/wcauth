@@ -6,12 +6,19 @@ $anon_ok = 1;
 
 pstart ();
 
-$extra_javascript .= "<script src='keystore.js'></script>\n";
 $extra_javascript .= "<script src='login.js'></script>\n";
 
 $arg_pub = trim (@$_REQUEST['pub']);
 $arg_sig = trim (@$_REQUEST['sig']);
 $arg_return_to = trim(@$_REQUEST['return_to']);
+$arg_delete = intval(@$_REQUEST['delete']);
+
+if ($arg_delete == 1) {
+    putsess ("key_id", 0);
+    $body .= "<div style='display:none' id='wcauth_delete'></div>\n";
+    pfinish ();
+}
+
 
 if (($nonce = @getsess ("nonce")) == "") {
     $nonce = generate_urandom_string(8);
@@ -21,10 +28,13 @@ if (($nonce = @getsess ("nonce")) == "") {
 if ($arg_pub == "") {
     putsess ("login_return_to", $arg_return_to);
 
-    $extra_javascript .= "<script>\n";
-    $extra_javascript .= "wcauth_send_key = 1;\n";
-    $extra_javascript .= sprintf ("wcauth_nonce = '%s';\n", $nonce);
-    $extra_javascript .= "</script>\n";
+    $body .= sprintf ("<div style='display:none' id='wcauth_signin'>"
+        ."%s</div>\n", h($nonce));
+
+    // $extra_javascript .= "<script>\n";
+    // $extra_javascript .= "wcauth_send_key = 1;\n";
+    // $extra_javascript .= sprintf ("wcauth_nonce = '%s';\n", $nonce);
+    // $extra_javascript .= "</script>\n";
     pfinish ();
 }
 
@@ -34,6 +44,7 @@ $val = openssl_verify ($nonce, $sig_binary, $arg_pub, 'sha256');
 
 if ($val <= 0) {
     $body .= "<p>invalid login</p>\n";
+    putsess ("nonce", "");
     pfinish ();
 }
 
