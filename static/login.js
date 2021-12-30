@@ -11,6 +11,14 @@ async function encode_public_key (pub_key) {
   return `-----BEGIN PUBLIC KEY-----\n${text}\n-----END PUBLIC KEY-----`;
 }
 
+/*
+ * The "origin" is the triple SCHEME://HOST:PORT, and each origin gets
+ * a set of indexedDB databases.  
+ * 
+ * We use a single database named wcauth and create a single
+ * objectstore named key.  We store a single object with id 1, whose
+ * value is a 2 element array with the public, then private CryptoKey
+ */
 const database_name = 'wcauth';
 
 function db_interface() {
