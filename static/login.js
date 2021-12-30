@@ -1,3 +1,5 @@
+const debug = false;
+
 function base64_encode(s) {
   return (btoa(String.fromCharCode.apply(null, new Uint8Array(s))));
 }
@@ -14,20 +16,22 @@ async function encode_public_key (pub_key) {
 /*
  * The "origin" is the triple SCHEME://HOST:PORT, and each origin gets
  * a set of indexedDB databases.  
- * 
- * We use a single database named wcauth and create a single
- * objectstore named key.  We store a single object with id 1, whose
- * value is a 2 element array with the public, then private CryptoKey
  */
-const database_name = 'wcauth';
+const database_name = 'wcauth'; // the name of our database
+const object_store_name = 'key'; // we use a single object_store with this name
+const row_id = 1; // we store a single value with this id
+
+/* the value we store is [public_key, private_key] */
 
 function db_interface() {
   let self = this;
   self.db = null;
-  self.table = 'key';
 
   self.open = function() {
     return new Promise (function (fulfill, reject) {
+      // the second argument to open is the version of the database.
+      // fancy programs can use it to do database schema updates.
+      // the current value is just an accident of development
       let req = indexedDB.open(database_name, 4);
       req.onsuccess = function (evt) {
 	self.db = evt.target.result;
@@ -35,8 +39,8 @@ function db_interface() {
       }
       req.onupgradeneeded = function(evt) {
 	self.db = evt.target.result;
-	if (! self.db.objectStoreNames.contains(self.table)) {
-	  self.db.createObjectStore(self.table);
+	if (! self.db.objectStoreNames.contains(object_store_name)) {
+	  self.db.createObjectStore(object_store_name);
 	}
       }
     });
@@ -44,8 +48,8 @@ function db_interface() {
 
   self.get_key = function () {
     return new Promise(function (fulfill, reject) {
-      var trans = self.db.transaction([self.table], "readonly");
-      var object_store = trans.objectStore(self.table);
+      var trans = self.db.transaction([object_store_name], "readonly");
+      var object_store = trans.objectStore(object_store_name);
       let req = object_store.get(1);
       req.onsuccess = function(evt) {
 	fulfill(evt.target.result);
@@ -58,9 +62,9 @@ function db_interface() {
 
   self.save_key = function(item) {
     return new Promise(function(fulfill, reject) {
-      var trans = self.db.transaction([self.table], "readwrite");
+      var trans = self.db.transaction([object_store_name], "readwrite");
       trans.oncomplete = function(evt) {fulfill(item);};
-      var objectStore = trans.objectStore(self.table);
+      var objectStore = trans.objectStore(object_store_name);
       objectStore.put(item, 1);
     });
   };
@@ -112,8 +116,12 @@ async function wcauth_login (nonce) {
       "?sig=" + encodeURIComponent(sig_base64) +
       "&pub=" + encodeURIComponent(pub);
 
-  // browser side redirect to dest
-  window.location = dest;
+  if (debug) {
+    console.log(dest);
+  } else {
+    // browser side redirect to dest
+    window.location = dest;
+  }
 }
 
 document.addEventListener("DOMContentLoaded", function() {
@@ -128,8 +136,12 @@ document.addEventListener("DOMContentLoaded", function() {
   // if this element exists, user wants to forget the private key
   if ((elt = document.getElementById('wcauth_delete')) != null) {
     delete_database();
-    // browser side redirect to site root
-    window.location = '/';
+    if (debug) {
+      console.log ('deleted');
+    } else {
+      // browser side redirect to site root
+      window.location = '/';
+    }
   }
 
 });
