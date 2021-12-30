@@ -63,13 +63,15 @@ async function get_key_pair () {
   await db.open();
   let key = await db.get_key();
   if (! key) {
-    let key_pair = await window.crypto.subtle.generateKey({
-      name: "RSASSA-PKCS1-v1_5",
-      modulusLength: 1024,
-      publicExponent: new Uint8Array([1, 0, 1]),
-      hash: "SHA-256",
-    }, true, ["sign", "verify"]);
-
+    let key_pair = await window.crypto.subtle.generateKey(
+      {
+	name: "RSASSA-PKCS1-v1_5",
+	modulusLength: 1024,
+	publicExponent: new Uint8Array([1, 0, 1]),
+	hash: "SHA-256",
+      }, 
+      false, // not extractable
+      ["sign", "verify"]);
     key = [key_pair.publicKey, key_pair.privateKey];
     await db.save_key(key);
   }
@@ -90,9 +92,11 @@ async function wcauth_login (nonce) {
   var enc = new TextEncoder();
   let nonce_bytes = enc.encode(nonce)
 
-  let sig = await window.crypto.subtle.sign({name:"RSASSA-PKCS1-v1_5"}, 
-					    private_key, 
-					    nonce_bytes);
+  let sig = await window.crypto.subtle.sign(
+    {name:"RSASSA-PKCS1-v1_5"}, 
+    private_key, 
+    nonce_bytes
+  );
 
   let sig_base64 = base64_encode (sig);
 
@@ -100,19 +104,23 @@ async function wcauth_login (nonce) {
       "?sig=" + encodeURIComponent(sig_base64) +
       "&pub=" + encodeURIComponent(pub);
 
+  // browser side redirect to dest
   window.location = dest;
 }
 
 document.addEventListener("DOMContentLoaded", function() {
   let elt;
 
-  elt = document.getElementById('wcauth_signin');
-  if (elt && elt.innerHTML) {
+  // if this element exists, it contains the nonce that needs signing
+  if ((elt = document.getElementById('wcauth_signin')) != null) {
     wcauth_login (elt.innerHTML);
+    // NORETURN
   }
 
+  // if this element exists, user wants to forget the private key
   if ((elt = document.getElementById('wcauth_delete')) != null) {
     delete_database();
+    // browser side redirect to site root
     window.location = '/';
   }
 
