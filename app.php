@@ -48,7 +48,7 @@ function check_login () {
     if (! @$anon_ok 
         && $user->user_id == 0
         && $_SERVER['PHP_SELF'] != "/login.php") {
-        $t = sprintf ("login.php?return_to=%s", 
+        $t = sprintf ("login.php?login=1&return_to=%s", 
             urlencode ($_SERVER['REQUEST_URI']));
         redirect ($t);
     }
@@ -84,7 +84,7 @@ function pstart () {
     global $user;
     if ($user->user_id == 0) {
         $body .= " | ";
-        $body .= mklink ("login", "login.php");
+        $body .= mklink ("login", "login.php?login=1");
     } else {
         $body .= " | ";
 
@@ -93,7 +93,7 @@ function pstart () {
         $body .= mklink ($user_name, "settings.php");
 
         $body .= " | ";
-        $body .= mklink ("logout", "logout.php");
+        $body .= mklink ("logout", "login.php?logout=1");
     }
     $body .= "</p>\n";
 
