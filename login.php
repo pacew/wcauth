@@ -35,6 +35,7 @@ $arg_return_to = trim(@$_REQUEST['return_to']);
 $arg_delete = intval(@$_REQUEST['delete']);
 $arg_login = intval(@$_REQUEST['login']);
 $arg_logout = intval(@$_REQUEST['logout']);
+$arg_browser_nonce = trim (@$_REQUEST['browser_nonce']);
 
 function get_nonce () {
     if (($nonce = @getsess ("nonce")) == "") {
@@ -42,15 +43,6 @@ function get_nonce () {
         putsess ("nonce", $nonce);
     }
     return ($nonce);
-}
-
-if ($arg_login == 1) {
-    putsess ("login_return_to", $arg_return_to);
-
-    $body .= sprintf ("<div style='display:none' id='wcauth_signin'>"
-        ."%s</div>\n", h(get_nonce()));
-
-    pfinish ();
 }
 
 function create_account ($public_key) {
@@ -79,16 +71,38 @@ function create_account ($public_key) {
     return ($key_id);
 }
 
+/* this is the start of the login sequence */
+if ($arg_login == 1) {
+    putsess ("key_id", 0); /* make sure we're logged out */
+    putsess ("login_return_to", $arg_return_to);
+
+    $body .= sprintf ("<div style='display:none' id='wcauth_signin'>"
+        ."%s</div>\n", h(base64_encode(get_nonce())));
+
+    pfinish ();
+    /*
+     * login.js will compute the signature and redirect with sig set,
+     * so we'll continue with the next if statement
+     */
+}
 
 if ($arg_sig) {
     // login.js has responded to the challenge
     $sig_binary = base64_decode ($arg_sig);
 
-    $val = openssl_verify (get_nonce(), $sig_binary, $arg_pub, 'sha256');
+    /*
+     * the message that was signed is the concatenation of the
+     * nonce that the browser generated, and the nonce that
+     * the server created and has saved in the session
+     */
+    $message = base64_decode($arg_browser_nonce) . get_nonce();
+
+    $val = openssl_verify ($message, $sig_binary, $arg_pub, 'sha256');
 
     if ($val <= 0) {
         flash ("invalid login");
         putsess ("nonce", "");
+        putsess ("key_id", 0);
         redirect ("/");
     }
 
