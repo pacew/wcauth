@@ -81,6 +81,7 @@ function create_account ($public_key) {
 
 
 if ($arg_sig) {
+    // login.js has responded to the challenge
     $sig_binary = base64_decode ($arg_sig);
 
     $val = openssl_verify (get_nonce(), $sig_binary, $arg_pub, 'sha256');
@@ -108,11 +109,13 @@ if ($arg_sig) {
 }
 
 if ($arg_logout == 1) {
+    // just logout of the server
     putsess ("key_id", 0);
     redirect ("/");
 }
 
 if ($arg_delete == 1) {
+    // delete private key in browser
     putsess ("key_id", 0);
     $body .= "<div style='display:none' id='wcauth_delete'></div>\n";
     pfinish ();
