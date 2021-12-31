@@ -1,14 +1,16 @@
 <?php
 
 require_once("app.php");
+require_once("totp.php");
 
 pstart ();
 
 $arg_link = intval (@$_REQUEST['link']);
 $arg_save = intval (@$_REQUEST['save']);
 $arg_email = trim (@$_REQUEST['email']);
-
-$body .= "<p>settings</p>\n";
+$arg_attach = intval (@$_REQUEST['attach']);
+$arg_user_name = trim (@$_REQUEST['user_name']);
+$arg_auth_code = trim (@$_REQUEST['auth_code']);
 
 if ($arg_link == 1) {
     $token = generate_urandom_string (10);
@@ -29,9 +31,118 @@ if ($arg_link == 1) {
         ." readonly='readonly' />\n", $url);
     $body .= "</p>\n";
 
+    $body .= "<p>\n";
     $body .= mklink ($url, $url);
+    $body .= "</p>\n";
+
+
+    $db_totp_key = "";
+    
+    $q = query ("select totp_key"
+        ." from users"
+        ." where user_id = ?",
+        $user->user_id);
+    
+    if (($r = fetch ($q)) != NULL) {
+        $body .= "<hr/>\n";
+
+        $body .= "<p>Scan this into your authentication app,"
+              ." then use your username to set up a different browser.</p>\n";
+
+        $db_totp_key = trim ($r->totp_key);
+
+
+        $body .= "<p>\n";
+        $issuer = "wcauth";
+        $label = sprintf ("%s:%s", $issuer, $cfg['conf_key']);
+        $totp_link = sprintf ("otpauth://totp/%s?secret=%s&issuer=%s",
+            rawurlencode ($label),
+            rawurlencode ($db_totp_key),
+            rawurlencode ($issuer));
+        $body .= make_qr_svg ($totp_link);
+        $body .= "</p>\n";
+
+        $body .= "<p>\n";
+        $body .= sprintf ("<input type='text' name='totp_key'"
+            ." size='40' value='%s' readonly='readonly' />\n",
+            h($db_totp_key));
+        $body .= "</p>\n";
+
+        $body .= "<p>\n";
+        $body .= totp ($db_totp_key);
+        $body .= "</p>\n";
+    }
+
     pfinish ();
 }
+
+if ($arg_attach == 1) {
+    $body .= "<form action='settings.php'>\n";
+    $body .= "<input type='hidden' name='attach' value='2' />\n";
+    $body .= "<table class='twocol'>\n";
+    $body .= "<tr><th>User name</th><td>\n";
+    $body .= "<input type='text' name='user_name' />\n";
+    $body .= "</tr></th>\n";
+    $body .= "<tr><th>Authorization code</th><td>\n";
+    $body .= "<input type='text' name='auth_code' />\n";
+    $body .= "</td></tr>\n";
+    $body .= "<tr><th></th><td>";
+    $body .= "<input type='submit' value='Login' />\n";
+    $body .= "</td></tr>\n";
+    $body .= "</table>\n";
+    $body .= "</form>\n";
+    pfinish ();
+}
+        
+function find_user_id ($user_name) {
+    global $arg_user_name;
+    $val = preg_match ('/^([0-9]*)$/', $arg_user_name, $parts);
+    if ($val) {
+        $user_id = intval(@$parts[1]);
+        if ($user_id)
+            return ($user_id);
+    }
+
+    if (preg_match ('/^user([0-9]*)$/', $arg_user_name, $parts)) {
+        $user_id = intval(@$parts[1]);
+        if ($user_id)
+            return ($user_id);
+    }
+
+    $q = query ("select user_id from users where email = ?", $user_name);
+    if (($r = fetch ($q)) != NULL)
+        return (intval ($r->user_id));
+
+    return (-1);
+}
+
+if ($arg_attach == 2) {
+    if (($user_id = find_user_id ($arg_user_name)) <= 0) {
+        flash ("invalid user id");
+        redirect ("settings.php");
+    }
+
+    $q = query ("select totp_key from users where user_id = ?",
+        $user_id);
+    if (($r = fetch ($q)) == NULL) {
+        flash ("internal error");
+        redirect ("settings.php");
+    }
+    
+    $totp_key = $r->totp_key;
+
+    $expect =totp ($totp_key);
+
+    if (strcmp ($arg_auth_code, $expect) == 0) {
+        query ("update pub_keys set user_id = ? where key_id = ?",
+            array ($user_id, $user->key_id));
+        redirect ("settings.php");
+    }
+
+    flash ("invalid login");
+    redirect ("settings.php");
+}
+
 
 $q = query ("select distinct email"
     ." from link_requests"
@@ -101,6 +212,7 @@ if ($arg_save == 1) {
     redirect ("settings.php");
 }
     
+$body .= "<p>settings</p>\n";
 
 
 $body .= "<form action='settings.php'>\n";
@@ -129,7 +241,12 @@ $body .= "</form>\n";
 
 
 $body .= "<p>\n";
-$body .= mklink ("make a link for this account", "settings.php?link=1");
+$body .= mklink ("make a link to export this account", "settings.php?link=1");
+$body .= "</p>\n";
+
+$body .= "<p>\n";
+$body .= mklink ("attach this browser to a different account", 
+    "settings.php?attach=1");
 $body .= "</p>\n";
 
 

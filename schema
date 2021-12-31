@@ -13,6 +13,7 @@ col val text
 table users
 col user_id int
 col email text
+col totp_key text
 
 table pub_keys
 col key_id int

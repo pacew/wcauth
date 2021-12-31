@@ -22,6 +22,7 @@
 
 
 require_once("app.php");
+require_once("totp.php");
 
 $anon_ok = 1;
 
@@ -63,7 +64,10 @@ function create_account ($public_key) {
             break;
     }
 
-    query ("insert into users (user_id) values (?)", $user_id);
+    $totp_key = totp_generate ();
+
+    query ("insert into users (user_id, totp_key) values (?, ?)", 
+        array ($user_id, $totp_key));
     query ("insert into pub_keys (key_id, user_id, key_text)"
         ." values (?, ?, ?)",
         array ($key_id, $user_id, $public_key));
